@@ -1,0 +1,6 @@
+{
+  "name": "PR Description Validation",
+  "description": "Require PR descriptions to include purpose, symptoms, ideas, approach, and implementation.",
+  "iconName": "octicon checklist",
+  "categories": ["Automation"]
+}
