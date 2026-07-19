@@ -20,7 +20,7 @@ jobs:
           node <<'NODE'
           const requiredSections = ['目的', '现象', '想法', '思路', '实现'];
           const body = (process.env.PR_BODY ?? '').replace(/<!--[\s\S]*?-->/g, '');
-          const headings = [...body.matchAll(/^##[ \t]+(.+?)[ \t]*$/gm)];
+          const headings = [...body.matchAll(/^[ \t]*##[ \t]+(.+?)[ \t]*$/gm)];
           const failures = [];
           let previousHeadingIndex = -1;
 
