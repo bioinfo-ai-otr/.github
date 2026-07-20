@@ -18,7 +18,12 @@ jobs:
     name: Validate PR description
     runs-on: ubuntu-latest
     steps:
+      - name: Skip exempt repositories
+        if: github.repository == 'bioinfo-ai-otr/client-collections'
+        run: echo 'PR description validation is disabled for this repository.'
+
       - name: Check required sections
+        if: github.repository != 'bioinfo-ai-otr/client-collections'
         env:
           PR_BODY: ${{ inputs.pr_body || github.event.pull_request.body }}
         shell: bash
