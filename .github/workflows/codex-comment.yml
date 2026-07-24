@@ -13,9 +13,6 @@ concurrency:
 jobs:
   run_codex:
     name: Answer with Codex
-    if: >
-      github.event.comment.user.type != 'Bot' &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.CODEX_REVIEW_TIMEOUT_MINUTES || '15') }}
     permissions:
@@ -33,6 +30,35 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
+            const comment = context.payload.comment;
+            if (!comment || comment.user?.type === 'Bot') {
+              core.setFailed('The @codex trigger must come from a user comment.');
+              return;
+            }
+            const visibleComment = (comment.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+            if (!/^\s*@codex(?:\s|[,:;.!?，：；。！？]|$)/im.test(visibleComment)) {
+              core.setFailed('The comment must start a line with a standalone @codex mention.');
+              return;
+            }
+
+            let permission = 'none';
+            try {
+              const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: comment.user.login,
+              });
+              permission = response.data.permission;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+            if (!['admin', 'maintain', 'write'].includes(permission)) {
+              core.setFailed('Only users with repository write access can invoke @codex.');
+              return;
+            }
+
             const prNumber =
               context.payload.pull_request?.number ??
               context.payload.issue?.number;
@@ -46,6 +72,10 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber,
             });
+            if (pullRequest.head.repo?.full_name !== context.payload.repository.full_name) {
+              core.setFailed('Fork pull requests cannot invoke the credentialed Codex workflow.');
+              return;
+            }
             core.setOutput('pr_number', String(prNumber));
             core.setOutput('comment_id', String(context.payload.comment.id));
             core.setOutput('comment_url', context.payload.comment.html_url);
